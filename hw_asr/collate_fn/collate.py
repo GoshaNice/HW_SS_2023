@@ -13,8 +13,11 @@ def collate_fn(dataset_items: List[dict]):
     """
     result_batch = {}
 
+    result_batch["audio_path"] = [item["audio_path"] for item in dataset_items]
+    
     spectrograms = []
-    max_spec_dim_last = max([item["spectrogram"].shape[-1] for item in dataset_items])
+    result_batch["spectrogram_length"] = torch.tensor([item["spectrogram"].shape[-1] for item in dataset_items])
+    max_spec_dim_last = torch.max(result_batch["spectrogram_length"])
     for item in dataset_items:
         spectrogram = item["spectrogram"]
         spectrograms.append(F.pad(spectrogram, (0, max_spec_dim_last - spectrogram.shape[-1]), "constant", 0))

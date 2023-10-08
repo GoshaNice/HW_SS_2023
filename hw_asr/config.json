@@ -1,5 +1,5 @@
 {
-  "name": "default_config",
+  "name": "default_config_DS2",
   "n_gpu": 1,
   "preprocessing": {
     "sr": 16000,
@@ -15,10 +15,10 @@
     "spectrogram": []
   },
   "arch": {
-    "type": "BaselineModel",
+    "type": "DeepSpeech2",
     "args": {
-      "n_feats": 128,
-      "fc_hidden": 512
+      "input_dim": 128,
+      "gru_hidden": 512
     }
   },
   "data": {
@@ -32,8 +32,7 @@
             "part": "train-clean-100",
             "max_audio_length": 20.0,
             "max_text_length": 200
-          },
-          "module": "hw_asr.models"
+          }
         },
         {
           "type": "LibrispeechDataset",

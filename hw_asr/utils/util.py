@@ -37,6 +37,12 @@ def prepare_device(n_gpu_use):
     """
     setup GPU device if available. get gpu device indices which are used for DataParallel
     """
+    
+    if torch.backends.mps.is_available():
+        device = torch.device("mps" if n_gpu_use > 0 else "cpu")
+        list_ids = list(range(n_gpu_use)) if n_gpu_use > 0 else []
+        return device, list_ids
+
     n_gpu = torch.cuda.device_count()
     if n_gpu_use > 0 and n_gpu == 0:
         print(

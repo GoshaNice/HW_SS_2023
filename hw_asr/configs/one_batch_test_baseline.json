@@ -1,6 +1,6 @@
 {
-  "name": "one_batch_test_DeepSpeech2",
-  "n_gpu": 1,
+  "name": "one_batch_test_baseline",
+  "n_gpu": 0,
   "preprocessing": {
     "sr": 16000,
     "spectrogram": {
@@ -15,10 +15,10 @@
     "spectrogram": []
   },
   "arch": {
-    "type": "DeepSpeech2",
+    "type": "BaselineModel",
     "args": {
-      "input_dim": 128,
-      "gru_hidden": 2560
+      "n_feats": 128,
+      "fc_hidden": 512
     }
   },
   "data": {

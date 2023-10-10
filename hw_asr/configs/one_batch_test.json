@@ -18,7 +18,8 @@
     "type": "DeepSpeech2",
     "args": {
       "input_dim": 128,
-      "gru_hidden": 2560
+      "fc_hidden": 1600,
+      "gru_hidden": 800
     }
   },
   "data": {

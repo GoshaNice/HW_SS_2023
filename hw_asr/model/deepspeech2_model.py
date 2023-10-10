@@ -8,28 +8,28 @@ class DeepSpeech2(BaseModel):
                  input_dim: int, 
                  n_class: int,
                  gru_hidden: int,
+                 fc_hidden: int,
                  **batch):
         super().__init__(input_dim, n_class, **batch)
         self.conv = Sequential(
-            nn.Conv1d(in_channels=input_dim, out_channels=input_dim, kernel_size=5, padding = 4, dilation = 2),
-            nn.ReLU(),
-            nn.BatchNorm1d(num_features=input_dim),
-            nn.Conv1d(in_channels=input_dim, out_channels=input_dim, kernel_size=5, padding = 4, dilation = 2),
-            nn.ReLU(),
-            nn.BatchNorm1d(num_features=input_dim),
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(11, 41), padding = "same"),
+            nn.BatchNorm2d(num_features=32),
+            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(11, 21), padding = "same"),
+            nn.BatchNorm2d(num_features=32),
         )
-        self.rnn = nn.GRU(input_size=input_dim, hidden_size=gru_hidden, num_layers=3, bidirectional=True, batch_first=True)
-        self.bn = nn.BatchNorm1d(num_features=gru_hidden * 2)
-        self.fc = nn.Linear(in_features=gru_hidden * 2, out_features=n_class)
+        self.rnn = nn.GRU(input_size=input_dim * 32, hidden_size=gru_hidden, num_layers=5, bidirectional=True, batch_first=True)
+        self.fc = Sequential(
+            nn.Linear(in_features=gru_hidden * 2, out_features=fc_hidden),
+            nn.ReLU(),
+            nn.Linear(in_features=fc_hidden, out_features=n_class)
+        )
 
 
     def forward(self, spectrogram, **batch):
-        x = self.conv(spectrogram)
-        x = x.transpose(1, 2)
-        x = self.rnn(x)
-        x = x[0].transpose(1, 2)
-        x = self.bn(x)
-        x = x.transpose(1, 2)
+        x = self.conv(spectrogram.unsqueeze(1))
+        x = x.permute(0, 3, 1, 2)
+        x = x.flatten(2)
+        x, _ = self.rnn(x)
         x = self.fc(x)
         return {"logits": x}
 

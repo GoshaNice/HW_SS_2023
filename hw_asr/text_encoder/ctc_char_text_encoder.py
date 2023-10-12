@@ -1,4 +1,5 @@
 from typing import List, NamedTuple
+from collections import defaultdict
 
 import torch
 
@@ -40,25 +41,30 @@ class CTCCharTextEncoder(CharTextEncoder):
         assert len(probs.shape) == 2
         char_length, voc_size = probs.shape
         assert voc_size == len(self.ind2char)
-        hypos: List[Hypothesis] = []
+        hypos: List[Hypothesis] = [Hypothesis("", 0)]
         for frame in probs:
             hypos = self.extend_and_merge(frame, hypos)
             hypos = self.truncate(hypos, beam_size)
         return sorted(hypos, key=lambda x: x.prob, reverse=True)
     
     def extend_and_merge(self, frame, hypos):
-        new_hypos = []
+        new_hypos = defaultdict(float)
         for next_char_index, next_char_proba in enumerate(frame):
             next_char = self.ind2char[next_char_index]
             for hypo in hypos:
-                last_char = hypo.text[-1]
+                if len(hypo.text) != 0:
+                    last_char = hypo.text[-1]
+                else:
+                    last_char = ""
+                
                 if last_char == next_char or next_char == self.EMPTY_TOK:
                     new_text = hypo.text
                 else:
                     new_text = hypo.text + next_char
                 new_prob = hypo.prob * next_char_proba
-                new_hypos.append(Hypothesis(new_text, new_prob))
-        return new_hypos
+                new_hypos[new_text] += new_prob
+        hypos = [Hypothesis(text, prob) for text, prob in new_hypos.items()]
+        return hypos
     
     def truncate(self, hypos, beam_size):
         return sorted(hypos, key=lambda x: x.prob, reverse=True)[:beam_size]

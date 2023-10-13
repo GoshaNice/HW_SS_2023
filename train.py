@@ -4,6 +4,7 @@ import warnings
 import os
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+warnings.filterwarnings("ignore")
 
 import numpy as np
 import torch
@@ -16,7 +17,6 @@ from hw_asr.utils import prepare_device
 from hw_asr.utils.object_loading import get_dataloaders
 from hw_asr.utils.parse_config import ConfigParser
 
-warnings.filterwarnings("ignore", category=UserWarning)
 
 # fix random seeds for reproducibility
 SEED = 123

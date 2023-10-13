@@ -35,8 +35,9 @@ class BeamsearchCERMetric(BaseMetric):
 
     def __call__(self, log_probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
         cers = []
+        log_probs = log_probs.cpu()
         lengths = log_probs_length.detach().numpy()
-        for batch, target_text in tqdm(enumerate(text)):
+        for batch, target_text in enumerate(text):
             length = lengths[batch]
             target_text = BaseTextEncoder.normalize_text(target_text)
             hypos = self.text_encoder.ctc_beam_search(log_probs[batch], probs_length=length)

@@ -2,6 +2,7 @@ from typing import List
 
 import torch
 from torch import Tensor
+from tqdm import tqdm
 
 from hw_asr.base.base_metric import BaseMetric
 from hw_asr.base.base_text_encoder import BaseTextEncoder
@@ -34,18 +35,11 @@ class BeamsearchCERMetric(BaseMetric):
 
     def __call__(self, log_probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
         cers = []
-        predictions = torch.argmax(log_probs.cpu(), dim=-1).numpy()
         lengths = log_probs_length.detach().numpy()
-        for log_prob_vec, length, target_text in zip(predictions, lengths, text):
+        for batch, target_text in tqdm(enumerate(text)):
+            length = lengths[batch]
             target_text = BaseTextEncoder.normalize_text(target_text)
-            if hasattr(self.text_encoder, "ctc_beam_search"):
-                for batch in range(log_probs.shape[0]):
-                    hypos = self.text_encoder.ctc_beam_search(log_probs[batch], probs_length=length)
-                    pred_text = hypos[0].text
-                    cers.append(calc_cer(target_text, pred_text))
-            elif hasattr(self.text_encoder, "ctc_decode"):
-                pred_text = self.text_encoder.ctc_decode(log_prob_vec[:length])
-            else:
-                pred_text = self.text_encoder.decode(log_prob_vec[:length])
+            hypos = self.text_encoder.ctc_beam_search(log_probs[batch], probs_length=length)
+            pred_text = hypos[0].text
             cers.append(calc_cer(target_text, pred_text))
         return sum(cers) / len(cers)

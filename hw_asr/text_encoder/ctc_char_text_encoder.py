@@ -4,6 +4,7 @@ from collections import defaultdict
 import torch
 
 from .char_text_encoder import CharTextEncoder
+from torchaudio.models.decoder import ctc_decoder
 
 
 class Hypothesis(NamedTuple):
@@ -38,10 +39,11 @@ class CTCCharTextEncoder(CharTextEncoder):
         """
         Performs beam search and returns a list of pairs (hypothesis, hypothesis probability).
         """
+        probs = probs[:probs_length]
         assert len(probs.shape) == 2
         char_length, voc_size = probs.shape
         assert voc_size == len(self.ind2char)
-        hypos: List[Hypothesis] = [Hypothesis("", 0)]
+        hypos: List[Hypothesis] = [Hypothesis("", 1)]
         for frame in probs:
             hypos = self.extend_and_merge(frame, hypos)
             hypos = self.truncate(hypos, beam_size)
@@ -68,4 +70,28 @@ class CTCCharTextEncoder(CharTextEncoder):
     
     def truncate(self, hypos, beam_size):
         return sorted(hypos, key=lambda x: x.prob, reverse=True)[:beam_size]
+    
+    def ctc_beam_search_lm(self, probs: torch.tensor, probs_length,
+                        beam_size: int = 20, n_best=1) -> List[Hypothesis]:
+        """
+        Performs beam search and returns a list of pairs (hypothesis, hypothesis probability).
+        """
+        probs = probs[:probs_length]
+        permutation = torch.LongTensor([27, 0, 5, 20, 1, 15, 14, 9, 8, 19, 18, 4, 12, 21, 13, 23, 3, 6, 7, 25, 16, 2, 22, 11, 0, 24, 10, 17, 26])
+        probs = probs[:, permutation]
+        final_hypos: List[Hypothesis] = []
+        decoder = ctc_decoder(
+            lexicon = "language_models/lexicon.txt",
+            tokens = "language_models/tokens.txt",
+            lm = "language_models/lm.bin",
+            nbest = beam_size,
+            beam_size = beam_size,
+            lm_weight = 3.43,
+            word_score = -1
+        )
 
+        hypos = decoder(probs.unsqueeze(0))[0]
+        print(hypos[0].words)
+        print(hypos[0].tokens)
+        final_hypos = [Hypothesis(text = " ".join(hypo.words), prob=hypo.score) for hypo in hypos]
+        return final_hypos

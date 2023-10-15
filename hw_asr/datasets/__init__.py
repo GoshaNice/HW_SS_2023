@@ -9,5 +9,5 @@ __all__ = [
     "CustomDirAudioDataset",
     "CustomAudioDataset",
     "LJspeechDataset",
-    "CommonVoiceDataset"
+    "CommonVoiceDataset",
 ]

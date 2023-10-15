@@ -25,6 +25,8 @@ torchaudio = ">2.0.0"
 pillow = "^10.0.1"
 numba = "0.58.0"
 torch-audiomentations = "^0.11.0"
+kenlm = "^0.2.0"
+flashlight-text = "0.0.3"
 
 [build-system]
 requires = ["poetry-core"]

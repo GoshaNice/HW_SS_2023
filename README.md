@@ -2,10 +2,17 @@
 
 ## Installation guide
 
-< Write your installation guide here >
+Current repository is for Linux
+
+(optional, not recommended) if you are trying to install it on macos run following before install:
+```shell
+make switch_to_macos
+```
+
+Then you run:
 
 ```shell
-pip install -r ./requirements.txt
+make install
 ```
 
 ## Recommended implementation order

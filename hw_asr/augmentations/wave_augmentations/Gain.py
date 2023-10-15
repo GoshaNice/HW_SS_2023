@@ -12,8 +12,10 @@ class Gain(AugmentationBase):
         x = data.unsqueeze(1)
         return self._aug(x).squeeze(1)
 
+
 class RandomGain(AugmentationBase):
-    def __init__(self, p = 0.5, *args, **kwargs):
+    def __init__(self, p=0.5, *args, **kwargs):
         self._aug = RandomApply(Gain(*args, **kwargs), p=p)
+
     def __call__(self, data: Tensor):
         return self._aug(data)

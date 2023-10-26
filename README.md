@@ -1,4 +1,7 @@
-# ASR project barebones
+# ASR HW1
+#### Implemented by: Pistsov Georgiy 202
+
+You can find report here: 
 
 ## Installation guide
 
@@ -15,14 +18,33 @@ Then you run:
 make install
 ```
 
+## Run tests:
+
+```shell
+make test
+```
+
+## Download Language model:
+
+```shell
+make download_language_model
+```
+The file "lm.bin" will be in language_models/
+
+
+## Download checkpoint:
+
+```shell
+make download_checkpoint
+```
+The file "model_best.pth" will be in default_test_model/
+
 ## Recommended implementation order
 
 You might be a little intimidated by the number of folders and classes. Try to follow this steps to gradually undestand
 the workflow.
 
-1) Test `hw_asr/tests/test_dataset.py`  and `hw_asr/tests/test_config.py` and make sure everythin works for you
-2) Implement missing functions to fix tests in  `hw_asr\tests\test_text_encoder.py`
-3) Implement missing functions to fix tests in  `hw_asr\tests\test_dataloader.py`
+
 4) Implement functions in `hw_asr\metric\utils.py`
 5) Implement missing function to run `train.py` with a baseline model
 6) Write your own model and try to overfit it on a single batch
@@ -58,26 +80,6 @@ the workflow.
 This repository is based on a heavily modified fork
 of [pytorch-template](https://github.com/victoresque/pytorch-template) repository.
 
-## Docker
-
-You can use this project with docker. Quick start:
-
-```bash 
-docker build -t my_hw_asr_image . 
-docker run \
-   --gpus '"device=0"' \
-   -it --rm \
-   -v /path/to/local/storage/dir:/repos/asr_project_template/data/datasets \
-   -e WANDB_API_KEY=<your_wandb_api_key> \
-	my_hw_asr_image python -m unittest 
-```
-
-Notes:
-
-* `-v /out/of/container/path:/inside/container/path` -- bind mount a path, so you wouldn't have to download datasets at
-  the start of every docker run.
-* `-e WANDB_API_KEY=<your_wandb_api_key>` -- set envvar for wandb (if you want to use it). You can find your API key
-  here: https://wandb.ai/authorize
 
 ## TODO
 

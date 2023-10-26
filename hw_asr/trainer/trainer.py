@@ -6,6 +6,7 @@ import PIL
 import pandas as pd
 import torch
 import torch.nn.functional as F
+import librosa
 from torch.nn.utils import clip_grad_norm_
 from torchvision.transforms import ToTensor
 from tqdm import tqdm
@@ -118,6 +119,7 @@ class Trainer(BaseTrainer):
                 )
                 self._log_predictions(**batch)
                 self._log_spectrogram(batch["spectrogram"])
+                self._log_audio(batch["spectrogram"])
                 self._log_scalars(self.train_metrics)
                 # we don't want to reset train metrics at the start of every epoch
                 # because we are interested in recent train metrics
@@ -185,6 +187,7 @@ class Trainer(BaseTrainer):
             self._log_scalars(self.evaluation_metrics)
             self._log_predictions(**batch)
             self._log_spectrogram(batch["spectrogram"])
+            self._log_audio(batch["spectrogram"])
 
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():
@@ -244,6 +247,12 @@ class Trainer(BaseTrainer):
         spectrogram = random.choice(spectrogram_batch.cpu())
         image = PIL.Image.open(plot_spectrogram_to_buf(spectrogram))
         self.writer.add_image("spectrogram", ToTensor()(image))
+    
+    def _log_audio(self, spectrogram_batch):
+        log_spectrogram = random.choice(spectrogram_batch.cpu())
+        melspec = (torch.exp(log_spectrogram)).detach().numpy()
+        audio = librosa.feature.inverse.mel_to_audio(melspec, sr=16000, n_fft=400)
+        self.writer.add_audio("audio", audio, sample_rate=16000)
 
     @torch.no_grad()
     def get_grad_norm(self, norm_type=2):

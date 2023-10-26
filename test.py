@@ -11,6 +11,7 @@ from hw_asr.trainer import Trainer
 from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.object_loading import get_dataloaders
 from hw_asr.utils.parse_config import ConfigParser
+from hw_asr.metric.utils import calc_wer, calc_cer
 
 DEFAULT_CHECKPOINT_PATH = ROOT_PATH / "default_test_model" / "checkpoint.pth"
 
@@ -20,6 +21,7 @@ def main(config, out_file):
 
     # define cpu or gpu if possible
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"We are running on {device}")
 
     # text_encoder
     text_encoder = config.get_text_encoder()
@@ -43,6 +45,13 @@ def main(config, out_file):
     model.eval()
 
     results = []
+    cer_argmax = []
+    cer_bs = []
+    cer_bs_lm = []
+
+    wer_argmax = []
+    wer_bs = []
+    wer_bs_lm = []
 
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(dataloaders["test"])):
@@ -57,19 +66,48 @@ def main(config, out_file):
                 batch["spectrogram_length"]
             )
             batch["probs"] = batch["log_probs"].exp().cpu()
+            probs = batch["probs"].detach().numpy()
             batch["argmax"] = batch["probs"].argmax(-1)
+
             for i in range(len(batch["text"])):
                 argmax = batch["argmax"][i]
                 argmax = argmax[: int(batch["log_probs_length"][i])]
+                target_text = batch["text"][i]
+                argmax_pred = text_encoder.ctc_decode(argmax.cpu().numpy())
+                bs_preds = text_encoder.ctc_beam_search(
+                            probs[i], batch["log_probs_length"][i], beam_size=10
+                        )[:10]
+                bs_lm_preds = text_encoder.ctc_beam_search_lm(
+                            probs[i], batch["log_probs_length"][i], beam_size=512
+                        )[0]
+
+                cer_argmax.append(calc_cer(target_text, argmax_pred))
+                wer_argmax.append(calc_wer(target_text, argmax_pred))
+
+                cer_bs.append(calc_cer(target_text, bs_preds[0]))
+                wer_bs.append(calc_wer(target_text, bs_preds[0]))
+
+                cer_bs_lm.append(calc_cer(target_text, bs_lm_preds))
+                wer_bs_lm.append(calc_wer(target_text, bs_lm_preds))
+
                 results.append(
                     {
-                        "ground_trurh": batch["text"][i],
-                        "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
-                        "pred_text_beam_search": text_encoder.ctc_beam_search(
-                            batch["probs"][i], batch["log_probs_length"][i], beam_size=100
-                        )[:10],
+                        "ground_truth": target_text,
+                        "pred_text_argmax": argmax_pred,
+                        "pred_text_beam_search": bs_preds,
+                        "pred_text_beam_search_LM": bs_lm_preds,
                     }
                 )
+    print("Final_metrics")
+    print("  Argmax:")
+    print(f"    CER: {sum(cer_argmax) / len(cer_argmax)}")
+    print(f"    WER: {sum(wer_argmax) / len(wer_argmax)}")
+    print("  BeamSearch:")
+    print(f"    CER: {sum(cer_bs) / len(cer_bs)}")
+    print(f"    WER: {sum(wer_bs) / len(wer_bs)}")
+    print("  BeamSearch+LM:")
+    print(f"    CER: {sum(cer_bs_lm) / len(cer_bs_lm)}")
+    print(f"    WER: {sum(wer_bs_lm) / len(wer_bs_lm)}")
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
 

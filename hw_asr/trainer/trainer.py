@@ -247,7 +247,7 @@ class Trainer(BaseTrainer):
         spectrogram = random.choice(spectrogram_batch.cpu())
         image = PIL.Image.open(plot_spectrogram_to_buf(spectrogram))
         self.writer.add_image("spectrogram", ToTensor()(image))
-    
+
     def _log_audio(self, spectrogram_batch):
         log_spectrogram = random.choice(spectrogram_batch.cpu())
         melspec = (torch.exp(log_spectrogram)).detach().numpy()

@@ -1,5 +1,5 @@
 {
-  "name": "DS2_with_augmentations",
+  "name": "Test",
   "n_gpu": 1,
   "preprocessing": {
     "sr": 16000,

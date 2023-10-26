@@ -26,7 +26,7 @@
         {
           "type": "LibrispeechDataset",
           "args": {
-            "part": "test-other"
+            "part": "test-clean"
           }
         }
       ]

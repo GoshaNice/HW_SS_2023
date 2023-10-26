@@ -46,11 +46,11 @@ def main(config, out_file):
 
     results = []
     cer_argmax = []
-    cer_bs = []
+    #cer_bs = []
     cer_bs_lm = []
 
     wer_argmax = []
-    wer_bs = []
+    #wer_bs = []
     wer_bs_lm = []
 
     with torch.no_grad():
@@ -66,7 +66,7 @@ def main(config, out_file):
                 batch["spectrogram_length"]
             )
             batch["probs"] = batch["log_probs"].exp().cpu()
-            probs = batch["probs"].detach().numpy()
+            probs = batch["probs"]
             batch["argmax"] = batch["probs"].argmax(-1)
 
             for i in range(len(batch["text"])):
@@ -74,9 +74,10 @@ def main(config, out_file):
                 argmax = argmax[: int(batch["log_probs_length"][i])]
                 target_text = batch["text"][i]
                 argmax_pred = text_encoder.ctc_decode(argmax.cpu().numpy())
+                '''
                 bs_preds = text_encoder.ctc_beam_search(
-                            probs[i], batch["log_probs_length"][i], beam_size=10
-                        )[:10]
+                            probs[i], batch["log_probs_length"][i], beam_size=5
+                        )[:5] ''' # it is too slow, so we skip it
                 bs_lm_preds = text_encoder.ctc_beam_search_lm(
                             probs[i], batch["log_probs_length"][i], beam_size=512
                         )[0]
@@ -84,17 +85,17 @@ def main(config, out_file):
                 cer_argmax.append(calc_cer(target_text, argmax_pred))
                 wer_argmax.append(calc_wer(target_text, argmax_pred))
 
-                cer_bs.append(calc_cer(target_text, bs_preds[0]))
-                wer_bs.append(calc_wer(target_text, bs_preds[0]))
+                #cer_bs.append(calc_cer(target_text, bs_preds[0].text))
+                #wer_bs.append(calc_wer(target_text, bs_preds[0].text))
 
-                cer_bs_lm.append(calc_cer(target_text, bs_lm_preds))
-                wer_bs_lm.append(calc_wer(target_text, bs_lm_preds))
+                cer_bs_lm.append(calc_cer(target_text, bs_lm_preds.text))
+                wer_bs_lm.append(calc_wer(target_text, bs_lm_preds.text))
 
                 results.append(
                     {
                         "ground_truth": target_text,
                         "pred_text_argmax": argmax_pred,
-                        "pred_text_beam_search": bs_preds,
+                        #"pred_text_beam_search": bs_preds,
                         "pred_text_beam_search_LM": bs_lm_preds,
                     }
                 )
@@ -102,9 +103,9 @@ def main(config, out_file):
     print("  Argmax:")
     print(f"    CER: {sum(cer_argmax) / len(cer_argmax)}")
     print(f"    WER: {sum(wer_argmax) / len(wer_argmax)}")
-    print("  BeamSearch:")
-    print(f"    CER: {sum(cer_bs) / len(cer_bs)}")
-    print(f"    WER: {sum(wer_bs) / len(wer_bs)}")
+    #print("  BeamSearch:")
+    #print(f"    CER: {sum(cer_bs) / len(cer_bs)}")
+    #print(f"    WER: {sum(wer_bs) / len(wer_bs)}")
     print("  BeamSearch+LM:")
     print(f"    CER: {sum(cer_bs_lm) / len(cer_bs_lm)}")
     print(f"    WER: {sum(wer_bs_lm) / len(wer_bs_lm)}")

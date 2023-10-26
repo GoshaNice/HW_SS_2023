@@ -27,3 +27,14 @@ download_checkpoint:
 
 download_language_model:
 	poetry run python language_models/download_lm.py
+
+test_model_test_other:
+	cp utils/config_other.json default_test_model/config.json
+	poetry run python test.py -r default_test_model/model_best.pth -o output_test_other.json
+
+test_model_test_clean:
+	cp utils/config_clean.json default_test_model/config.json
+	poetry run python test.py -r default_test_model/model_best.pth -o output_test_clean.json
+
+train:
+	poetry run python train.py -c hw_asr/config.json

@@ -2,7 +2,7 @@ from torch import Tensor
 
 from hw_asr.augmentations.base import AugmentationBase
 from hw_asr.augmentations.random_apply import RandomApply
-import torch_augmentations as ta
+import torch_audiomentations as ta
 
 
 class PitchShift(AugmentationBase):

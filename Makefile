@@ -1,4 +1,4 @@
-CODE = hw_asr
+CODE = src
 
 switch_to_macos:
 	rm poetry.lock
@@ -13,7 +13,7 @@ install:
 	poetry install
 
 test:
-	poetry run python -m unittest discover hw_asr/tests
+	poetry run python -m unittest discover src/tests
 
 lint:
 	poetry run pflake8 $(CODE)
@@ -37,4 +37,4 @@ test_model_test_clean:
 	poetry run python test.py -r default_test_model/model_best.pth -o output_test_clean.json
 
 train:
-	poetry run python train.py -c hw_asr/config.json
+	poetry run python train.py -c src/config.json

@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "asr-project-hw1"
+name = "ss-project-hw1"
 version = "0.1.0"
-description = "ASR Project HW1"
+description = "SS Project HW1"
 authors = ["Gosha <gkpistsov@edu.hse.ru>"]
 readme = "README.md"
-packages = [{include = "hw_asr"}]
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"

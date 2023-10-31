@@ -1,4 +1,4 @@
-# ASR HW1
+# SS HW1
 #### Implemented by: Pistsov Georgiy 202
 
 You can find report here: [wandb report](https://api.wandb.ai/links/goshanice/fpzqmh1d)
@@ -44,7 +44,7 @@ The file "model_best.pth" will be in default_test_model/
 ```shell
 make train
 ```
-Config for training you can find in hw_asr/config.json
+Config for training you can find in src/config.json
 
 
 ## Test model:

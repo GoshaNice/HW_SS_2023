@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "asr-project-hw1"
+name = "ss-project-hw2"
 version = "0.1.0"
-description = "ASR Project HW1"
+description = "SS Project HW2"
 authors = ["Gosha <gkpistsov@edu.hse.ru>"]
 readme = "README.md"
-packages = [{include = "hw_asr"}]
+packages = [{include = "src"}]
 
 [[tool.poetry.source]]
 name = "torch"

@@ -18,24 +18,22 @@ class BaseDataset(Dataset):
     def __init__(
         self,
         index,
-        text_encoder: BaseTextEncoder,
         config_parser: ConfigParser,
         wave_augs=None,
         spec_augs=None,
         limit=None,
         max_audio_length=None,
-        max_text_length=None,
     ):
-        self.text_encoder = text_encoder
         self.config_parser = config_parser
         self.wave_augs = wave_augs
         self.spec_augs = spec_augs
         self.log_spec = config_parser["preprocessing"]["log_spec"]
 
         self._assert_index_is_valid(index)
+        """ #TODO
         index = self._filter_records_from_dataset(
-            index, max_audio_length, max_text_length, limit
-        )
+            index, max_audio_length, limit
+        )"""
         # it's a good idea to sort index by audio length
         # It would be easier to write length-based batch samplers later
         index = self._sort_index(index)
@@ -43,21 +41,24 @@ class BaseDataset(Dataset):
 
     def __getitem__(self, ind):
         data_dict = self._index[ind]
-        audio_path = data_dict["path"]
-        audio_wave = self.load_audio(audio_path)
-        audio_wave, audio_spec = self.process_wave(audio_wave)
+        mix_path = data_dict["mix"]
+        mix = self.load_audio(mix_path)
+        ref_path = data_dict["ref"]
+        ref = self.load_audio(ref_path)
+        target_path = data_dict["target"]
+        target = self.load_audio(target_path)
         return {
-            "audio": audio_wave,
-            "spectrogram": audio_spec,
-            "duration": audio_wave.size(1) / self.config_parser["preprocessing"]["sr"],
-            "text": data_dict["text"],
-            "text_encoded": self.text_encoder.encode(data_dict["text"]),
-            "audio_path": audio_path,
+            "mix": mix,
+            "mix_length": data_dict["mix_length"],
+            "ref": ref,
+            "ref_length": data_dict["ref_length"],
+            "target": target,
+            "target_length": data_dict["target_length"],
         }
 
     @staticmethod
     def _sort_index(index):
-        return sorted(index, key=lambda x: x["audio_len"])
+        return sorted(index, key=lambda x: x["mix_length"])
 
     def __len__(self):
         return len(self._index)
@@ -136,14 +137,7 @@ class BaseDataset(Dataset):
     @staticmethod
     def _assert_index_is_valid(index):
         for entry in index:
-            assert "audio_len" in entry, (
-                "Each dataset item should include field 'audio_len'"
+            assert "ref" in entry, (
+                "Each dataset item should include field 'ref'"
                 " - duration of audio (in seconds)."
-            )
-            assert "path" in entry, (
-                "Each dataset item should include field 'path'" " - path to audio file."
-            )
-            assert "text" in entry, (
-                "Each dataset item should include field 'text'"
-                " - text transcription of the audio."
-            )
+            ) #TODO

@@ -32,14 +32,12 @@ class Trainer(BaseTrainer):
         config,
         device,
         dataloaders,
-        text_encoder,
         lr_scheduler=None,
         len_epoch=None,
         skip_oom=True,
     ):
         super().__init__(model, criterion, metrics, optimizer, config, device)
         self.skip_oom = skip_oom
-        self.text_encoder = text_encoder
         self.config = config
         self.train_dataloader = dataloaders["train"]
         if len_epoch is None:
@@ -67,7 +65,7 @@ class Trainer(BaseTrainer):
         """
         Move all necessary tensors to the HPU
         """
-        for tensor_for_gpu in ["spectrogram", "text_encoded"]:
+        for tensor_for_gpu in ["mix", "ref", "ref_length"]:
             batch[tensor_for_gpu] = batch[tensor_for_gpu].to(device)
         return batch
 
@@ -117,7 +115,7 @@ class Trainer(BaseTrainer):
                 self.writer.add_scalar(
                     "learning rate", self.lr_scheduler.get_last_lr()[0]
                 )
-                self._log_predictions(**batch)
+                #self._log_predictions(**batch) #TODO
                 self._log_spectrogram(batch["spectrogram"])
                 self._log_audio(batch["spectrogram"])
                 self._log_scalars(self.train_metrics)
@@ -140,6 +138,8 @@ class Trainer(BaseTrainer):
         if is_train:
             self.optimizer.zero_grad()
         outputs = self.model(**batch)
+        print("YOU ARE HERE")
+        print(outputs.shape)
         if type(outputs) is dict:
             batch.update(outputs)
         else:
@@ -214,7 +214,6 @@ class Trainer(BaseTrainer):
         *args,
         **kwargs,
     ):
-        # TODO: implement logging of beam search results
         if self.writer is None:
             return
         argmax_inds = log_probs.cpu().argmax(-1).numpy()

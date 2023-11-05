@@ -11,47 +11,51 @@ def collate_fn(dataset_items: List[dict]):
     Collate and pad fields in dataset items
     """
     result_batch = {}
-
-    result_batch["audio_path"] = [item["audio_path"] for item in dataset_items]
-
-    spectrograms = []
-    result_batch["spectrogram_length"] = torch.tensor(
-        [item["spectrogram"].shape[-1] for item in dataset_items]
-    )
-    max_spec_dim_last = torch.max(result_batch["spectrogram_length"])
+    result_batch["mix_length"] = torch.tensor([item["mix"].shape[-1] for item in dataset_items])
+    max_mix_length = torch.max(result_batch["mix_length"]).item()
+    mixes = []
     for item in dataset_items:
-        spectrogram = item["spectrogram"]
-        spectrograms.append(
+        mix = item["mix"]
+        mixes.append(
             F.pad(
-                spectrogram,
-                (0, max_spec_dim_last - spectrogram.shape[-1]),
+                mix,
+                (0, int(max_mix_length - mix.shape[-1])),
                 "constant",
                 0,
             )
         )
+    result_batch["mix"] = torch.cat(mixes, dim=0)
 
-    result_batch["spectrogram"] = torch.cat(spectrograms, dim=0)
-
-    texts = []
-    texts_encoded = []
-    result_batch["text_encoded_length"] = torch.tensor(
-        [item["text_encoded"].shape[-1] for item in dataset_items]
-    )
-    max_encoded_text_dim_last = torch.max(result_batch["text_encoded_length"])
+    result_batch["ref_length"] = torch.tensor([item["ref"].shape[-1] for item in dataset_items])
+    max_ref_length = torch.max(result_batch["ref_length"]).item()
+    refs = []
     for item in dataset_items:
-        text = item["text"]
-        texts.append(text)
-        text_encoded = item["text_encoded"]
-        texts_encoded.append(
+        ref = item["ref"]
+        refs.append(
             F.pad(
-                text_encoded,
-                (0, max_encoded_text_dim_last - text_encoded.shape[-1]),
+                ref,
+                (0, int(max_ref_length - ref.shape[-1])),
                 "constant",
                 0,
             )
         )
+    result_batch["ref"] = torch.cat(refs, dim=0)
 
-    result_batch["text_encoded"] = torch.cat(texts_encoded, dim=0)
-    result_batch["text"] = texts
+
+    result_batch["target_length"] = torch.tensor([item["target"].shape[-1] for item in dataset_items])
+    max_target_length = torch.max(result_batch["target_length"]).item()
+    targets = []
+    for item in dataset_items:
+        target = item["target"]
+        targets.append(
+            F.pad(
+                target,
+                (0, int(max_target_length - target.shape[-1])),
+                "constant",
+                0,
+            )
+        )
+    result_batch["target"] = torch.cat(targets, dim=0)
+
 
     return result_batch

@@ -7,9 +7,11 @@ from pathlib import Path
 import torchaudio
 from speechbrain.utils.data_utils import download_file
 from tqdm import tqdm
+from glob import glob
 
 from src.base.base_dataset import BaseDataset
 from src.utils import ROOT_PATH
+from src.base.base_mixer import MixtureGenerator, LibriSpeechSpeakerFiles
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +27,16 @@ URL_LINKS = {
 
 
 class LibrispeechDataset(BaseDataset):
-    def __init__(self, part, data_dir=None, *args, **kwargs):
+    def __init__(self, part, data_dir=None, nfiles=1000, test=False, *args, **kwargs):
         assert part in URL_LINKS or part == "train_all"
 
         if data_dir is None:
             data_dir = ROOT_PATH / "data" / "datasets" / "librispeech"
             data_dir.mkdir(exist_ok=True, parents=True)
         self._data_dir = data_dir
+        self.nfiles = nfiles
+        self.test = test
+
         if part == "train_all":
             index = sum(
                 [
@@ -57,7 +62,7 @@ class LibrispeechDataset(BaseDataset):
         shutil.rmtree(str(self._data_dir / "LibriSpeech"))
 
     def _get_or_load_index(self, part):
-        index_path = self._data_dir / f"{part}_index.json"
+        index_path = self._data_dir / f"{part}_ss_index.json"
         if index_path.exists():
             with index_path.open() as f:
                 index = json.load(f)
@@ -72,28 +77,45 @@ class LibrispeechDataset(BaseDataset):
         split_dir = self._data_dir / part
         if not split_dir.exists():
             self._load_part(part)
+        
+        speakers_dirs = [el.name for el in os.scandir(split_dir)]
+        speakers_files = [LibriSpeechSpeakerFiles(i, split_dir, audioTemplate="*.flac") for i in speakers_dirs]
+        out_folder = self._data_dir / f"{part}_ss"
+        mixer = MixtureGenerator(speakers_files=speakers_files, 
+                                 out_folder=out_folder,
+                                 nfiles = self.nfiles,
+                                 test = self.test)
+        
+        index = []
+        mixer.generate_mixes(snr_levels=[-5, 5],
+                             num_workers=2,
+                             update_steps=100,
+                             trim_db = 20,
+                             vad_db=20,
+                             audioLen=3)
+        
+        ref = sorted(glob(os.path.join(out_folder, '*-ref.wav')))
+        mix = sorted(glob(os.path.join(out_folder, '*-mixed.wav')))
+        target = sorted(glob(os.path.join(out_folder, '*-target.wav')))
 
-        flac_dirs = set()
-        for dirpath, dirnames, filenames in os.walk(str(split_dir)):
-            if any([f.endswith(".flac") for f in filenames]):
-                flac_dirs.add(dirpath)
-        for flac_dir in tqdm(
-            list(flac_dirs), desc=f"Preparing librispeech folders: {part}"
-        ):
-            flac_dir = Path(flac_dir)
-            trans_path = list(flac_dir.glob("*.trans.txt"))[0]
-            with trans_path.open() as f:
-                for line in f:
-                    f_id = line.split()[0]
-                    f_text = " ".join(line.split()[1:]).strip()
-                    flac_path = flac_dir / f"{f_id}.flac"
-                    t_info = torchaudio.info(str(flac_path))
-                    length = t_info.num_frames / t_info.sample_rate
-                    index.append(
-                        {
-                            "path": str(flac_path.absolute().resolve()),
-                            "text": f_text.lower(),
-                            "audio_len": length,
-                        }
-                    )
+        for i in range(len(ref)):
+            ref_path = ref[i]
+            ref_info = torchaudio.info(ref_path)
+            ref_length = ref_info.num_frames / ref_info.sample_rate
+
+            mix_path = mix[i]
+            mix_info = torchaudio.info(mix_path)
+            mix_length = mix_info.num_frames / mix_info.sample_rate
+
+            target_path = target[i]
+            target_info = torchaudio.info(target_path)
+            target_length = target_info.num_frames / target_info.sample_rate
+            index.append({
+                "ref": ref_path,
+                "ref_length": ref_length,
+                "mix": mix_path,
+                "mix_length": mix_length,
+                "target": target_path,
+                "target_length": target_length
+            })
         return index

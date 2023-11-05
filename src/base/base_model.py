@@ -11,14 +11,14 @@ class BaseModel(nn.Module):
     Base class for all models
     """
 
-    def __init__(self, n_feats, n_class, **batch):
+    def __init__(self, **batch):
         super().__init__()
 
     @abstractmethod
-    def forward(self, **batch) -> Union[Tensor, dict]:
+    def forward(self, **batch) -> Tensor:
         """
         Forward pass logic.
-        Can return a torch.Tensor (it will be interpreted as logits) or a dict.
+        Can return a torch.Tensor (it will be interpreted as wav).
 
         :return: Model output
         """

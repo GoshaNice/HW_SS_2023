@@ -10,7 +10,7 @@ from src.collate_fn.collate import collate_fn
 from src.utils.parse_config import ConfigParser
 
 
-def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
+def get_dataloaders(configs: ConfigParser):
     dataloaders = {}
     for split, params in configs["data"].items():
         num_workers = params.get("num_workers", 1)
@@ -30,7 +30,6 @@ def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
                 configs.init_obj(
                     ds,
                     src.datasets,
-                    text_encoder=text_encoder,
                     config_parser=configs,
                     wave_augs=wave_augs,
                     spec_augs=spec_augs,

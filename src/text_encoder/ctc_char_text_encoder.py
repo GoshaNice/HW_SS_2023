@@ -14,13 +14,13 @@ class Hypothesis(NamedTuple):
 
 
 VOCAB = [""] + list(ascii_lowercase) + [" "]
-
+"""
 DECODER = build_ctcdecoder(
     VOCAB,
     kenlm_model_path="language_models/lm.bin",
     alpha=0.5,
     beta=1.5,
-)
+)"""
 
 
 class CTCCharTextEncoder(CharTextEncoder):

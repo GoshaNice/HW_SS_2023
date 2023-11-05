@@ -19,8 +19,8 @@
   },
   "data": {
       "train": {
-          "batch_size": 1,
-          "num_workers": 0,
+          "batch_size": 2,
+          "num_workers": 5,
           "datasets": [
               {
                   "type": "LibrispeechDataset",
@@ -32,8 +32,8 @@
           ]
       },
       "val": {
-          "batch_size": 4,
-          "num_workers": 0,
+          "batch_size": 2,
+          "num_workers": 5,
           "datasets": [
               {
                   "type": "LibrispeechDataset",
@@ -44,8 +44,8 @@
           ]
       },
       "test-other": {
-          "batch_size": 4,
-          "num_workers": 0,
+          "batch_size": 2,
+          "num_workers": 5,
           "datasets": [
               {
                   "type": "LibrispeechDataset",
@@ -56,8 +56,8 @@
           ]
       },
       "test-clean": {
-          "batch_size": 4,
-          "num_workers": 0,
+          "batch_size": 2,
+          "num_workers": 5,
           "datasets": [
               {
                   "type": "LibrispeechDataset",
@@ -77,9 +77,9 @@
   "loss": {
       "type": "SpExLoss",
       "args": {
-        "alpha": 0.5,
+        "alpha": 0.1,
         "beta": 0.1,
-        "gamma": 0.1
+        "gamma": 0.5
       }
   },
   "metrics": [
@@ -101,7 +101,7 @@
       }
   },
   "trainer": {
-      "epochs": 10,
+      "epochs": 100,
       "save_dir": "saved/",
       "save_period": 5,
       "verbosity": 2,

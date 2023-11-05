@@ -13,12 +13,12 @@ class SiSDRMetric(BaseMetric):
         super().__init__(*args, **kwargs)
 
     def __call__(
-        self, batch_prediction: Tensor, batch_target: Tensor, **kwargs
+        self, prediction: Tensor, target: Tensor, **kwargs
     ):
         si_sdrs = []
-        predictions = batch_prediction.cpu().detach().numpy()
-        targets = batch_target.cpu().detach().numpy()
+        predictions = prediction.cpu().detach().numpy()
+        targets = target.cpu().detach().numpy()
         for prediction, target in zip(predictions, targets):
             si_sdr = calc_si_sdr(prediction, target)
             si_sdrs.append(si_sdr)
-        return sum(si_sdrs) / len(si_sdrs)
+        return - sum(si_sdrs) / len(si_sdrs)

@@ -79,8 +79,8 @@ class SpExPlus(nn.Module):
                  L2: int = 4, 
                  L3: int = 8, 
                  N: int = 16,
-                 proj_dim: int = 256,
-                 tch_extractor_hidden: int = 256,
+                 proj_dim: int = 32,
+                 tch_extractor_hidden: int = 32,
                  num_speakers: int = 50,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)

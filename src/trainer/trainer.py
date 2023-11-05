@@ -116,9 +116,9 @@ class Trainer(BaseTrainer):
                     "learning rate", self.lr_scheduler.get_last_lr()[0]
                 )
                 #self._log_predictions(**batch) #TODO
-                self._log_spectrogram(batch["spectrogram"])
-                self._log_audio(batch["spectrogram"])
-                self._log_scalars(self.train_metrics)
+                #self._log_spectrogram(batch["spectrogram"])
+                #self._log_audio(batch["spectrogram"])
+                #self._log_scalars(self.train_metrics)
                 # we don't want to reset train metrics at the start of every epoch
                 # because we are interested in recent train metrics
                 last_train_metrics = self.train_metrics.result()
@@ -137,19 +137,18 @@ class Trainer(BaseTrainer):
         batch = self.move_batch_to_device(batch, self.device)
         if is_train:
             self.optimizer.zero_grad()
-        outputs = self.model(**batch)
-        print("YOU ARE HERE")
-        print(outputs.shape)
-        if type(outputs) is dict:
-            batch.update(outputs)
-        else:
-            batch["logits"] = outputs
+        s1, s2, s3 = self.model(**batch)
+        batch["s1"] = s1
+        batch["s2"] = s2
+        batch["s3"] = s3
+        batch["prediction"] = s1
+        #batch["probs"] = probs
 
-        batch["log_probs"] = F.log_softmax(batch["logits"], dim=-1)
+        #batch["log_probs"] = F.log_softmax(batch["logits"], dim=-1)
         # here we have to change model to model.module in multi-gpu case
-        batch["log_probs_length"] = self.model.transform_input_lengths(
-            batch["spectrogram_length"]
-        )
+        #batch["log_probs_length"] = self.model.transform_input_lengths(
+        #    batch["spectrogram_length"]
+        #)
         batch["loss"] = self.criterion(**batch)
         if is_train:
             batch["loss"].backward()
@@ -185,9 +184,10 @@ class Trainer(BaseTrainer):
                 )
             self.writer.set_step(epoch * self.len_epoch, part)
             self._log_scalars(self.evaluation_metrics)
-            self._log_predictions(**batch)
-            self._log_spectrogram(batch["spectrogram"])
-            self._log_audio(batch["spectrogram"])
+            #self._log_predictions(**batch)
+            #self._log_spectrogram(batch["spectrogram"])
+            self._log_audio(batch["target"])
+            self._log_audio(batch["prediction"])
 
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():
@@ -247,10 +247,8 @@ class Trainer(BaseTrainer):
         image = PIL.Image.open(plot_spectrogram_to_buf(spectrogram))
         self.writer.add_image("spectrogram", ToTensor()(image))
 
-    def _log_audio(self, spectrogram_batch):
-        log_spectrogram = random.choice(spectrogram_batch.cpu())
-        melspec = (torch.exp(log_spectrogram)).detach().numpy()
-        audio = librosa.feature.inverse.mel_to_audio(melspec, sr=16000, n_fft=400)
+    def _log_audio(self, audio_batch):
+        audio = random.choice(audio_batch.cpu())
         self.writer.add_audio("audio", audio, sample_rate=16000)
 
     @torch.no_grad()

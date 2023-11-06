@@ -31,14 +31,14 @@ class SpExLoss(nn.Module):
                 0,
             )
 
-
     def forward(
-        self, s1, s2, s3, target, probs=None, speaker_id=None, **batch
+        self, s1, s2, s3, target, probs, target_id=None, **batch
     ) -> Tensor:
         target = target.to(s1.device)
         s1 = s1.squeeze(1)
         s2 = s2.squeeze(1)
         s3 = s3.squeeze(1)
+        probs = probs.squeeze(1)
         s1 = self.crop_or_pad(s1, target)
         s2 = self.crop_or_pad(s2, target)
         s3 = self.crop_or_pad(s3, target)
@@ -46,5 +46,8 @@ class SpExLoss(nn.Module):
         loss -= (1 - self.alpha - self.beta) * calc_si_sdr(s1, target)
         loss -= self.alpha * calc_si_sdr(s2, target)
         loss -= self.beta * calc_si_sdr(s3, target)
-        #loss += self.gamma * self.ce(probs, speaker_id)
+        if target_id is not None:
+            probs = torch.softmax(probs, dim=1)
+            self.ce = self.ce.to(probs.device)
+            loss += self.gamma * self.ce(probs, target_id)
         return loss.mean()

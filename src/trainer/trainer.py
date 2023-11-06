@@ -65,7 +65,7 @@ class Trainer(BaseTrainer):
         """
         Move all necessary tensors to the HPU
         """
-        for tensor_for_gpu in ["mix", "ref", "ref_length"]:
+        for tensor_for_gpu in ["mix", "ref", "ref_length", "target_id"]:
             batch[tensor_for_gpu] = batch[tensor_for_gpu].to(device)
         return batch
 
@@ -115,10 +115,9 @@ class Trainer(BaseTrainer):
                 self.writer.add_scalar(
                     "learning rate", self.lr_scheduler.get_last_lr()[0]
                 )
-                #self._log_predictions(**batch) #TODO
-                #self._log_spectrogram(batch["spectrogram"])
-                #self._log_audio(batch["spectrogram"])
-                #self._log_scalars(self.train_metrics)
+
+                self._log_audio(batch["prediction"], batch["ref"], batch["target"])
+                self._log_scalars(self.train_metrics)
                 # we don't want to reset train metrics at the start of every epoch
                 # because we are interested in recent train metrics
                 last_train_metrics = self.train_metrics.result()
@@ -137,12 +136,12 @@ class Trainer(BaseTrainer):
         batch = self.move_batch_to_device(batch, self.device)
         if is_train:
             self.optimizer.zero_grad()
-        s1, s2, s3 = self.model(**batch)
+        s1, s2, s3, probs = self.model(**batch)
         batch["s1"] = s1
         batch["s2"] = s2
         batch["s3"] = s3
         batch["prediction"] = s1
-        #batch["probs"] = probs
+        batch["probs"] = probs
 
         #batch["log_probs"] = F.log_softmax(batch["logits"], dim=-1)
         # here we have to change model to model.module in multi-gpu case
@@ -184,10 +183,7 @@ class Trainer(BaseTrainer):
                 )
             self.writer.set_step(epoch * self.len_epoch, part)
             self._log_scalars(self.evaluation_metrics)
-            #self._log_predictions(**batch)
-            #self._log_spectrogram(batch["spectrogram"])
-            self._log_audio(batch["target"])
-            self._log_audio(batch["prediction"])
+            self._log_audio(batch["prediction"], batch["ref"], batch["target"])
 
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():
@@ -204,52 +200,19 @@ class Trainer(BaseTrainer):
             total = self.len_epoch
         return base.format(current, total, 100.0 * current / total)
 
-    def _log_predictions(
-        self,
-        text,
-        log_probs,
-        log_probs_length,
-        audio_path,
-        examples_to_log=10,
-        *args,
-        **kwargs,
-    ):
-        if self.writer is None:
-            return
-        argmax_inds = log_probs.cpu().argmax(-1).numpy()
-        argmax_inds = [
-            inds[: int(ind_len)]
-            for inds, ind_len in zip(argmax_inds, log_probs_length.numpy())
-        ]
-        argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
-        argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
-        shuffle(tuples)
-        rows = {}
-        for pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
-            target = BaseTextEncoder.normalize_text(target)
-            wer = calc_wer(target, pred) * 100
-            cer = calc_cer(target, pred) * 100
-
-            rows[Path(audio_path).name] = {
-                "target": target,
-                "raw prediction": raw_pred,
-                "predictions": pred,
-                "wer": wer,
-                "cer": cer,
-            }
-        self.writer.add_table(
-            "predictions", pd.DataFrame.from_dict(rows, orient="index")
-        )
-
     def _log_spectrogram(self, spectrogram_batch):
         spectrogram = random.choice(spectrogram_batch.cpu())
         image = PIL.Image.open(plot_spectrogram_to_buf(spectrogram))
         self.writer.add_image("spectrogram", ToTensor()(image))
 
-    def _log_audio(self, audio_batch):
-        audio = random.choice(audio_batch.cpu())
-        self.writer.add_audio("audio", audio, sample_rate=16000)
+    def _log_audio(self, prediction_batch, ref_batch, target_batch):
+        ind = random.choice(torch.arange(prediction_batch.shape[0]))
+        prediction = prediction_batch[ind]
+        ref = ref_batch[ind]
+        target = target_batch[ind]
+        self.writer.add_audio("prediction", prediction, sample_rate=16000)
+        self.writer.add_audio("ref", ref, sample_rate=16000)
+        self.writer.add_audio("target", target, sample_rate=16000)
 
     @torch.no_grad()
     def get_grad_norm(self, norm_type=2):

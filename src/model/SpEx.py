@@ -81,7 +81,7 @@ class SpExPlus(nn.Module):
                  N: int = 16,
                  proj_dim: int = 32,
                  tch_extractor_hidden: int = 32,
-                 num_speakers: int = 50,
+                 num_speakers: int = 248,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.L1 = L1
@@ -173,10 +173,13 @@ class SpExPlus(nn.Module):
         y = self.norm_speaker_extractor(y.transpose(1, 2)).transpose(1, 2)
         y = self.proj_extractor(y)
 
-        aux_T = (ref.shape[-1] - self.L1) // (self.L1 // 2) + 1
-        aux_T = ((aux_T // 3) // 3) // 3
-        v = (torch.sum(v, -1) / aux_T).view(v.shape[0], -1,1).float()
+        ref_T = (ref.shape[-1] - self.L1) // (self.L1 // 2) + 1
+        ref_T = ((ref_T // 3) // 3) // 3
+        v = (torch.sum(v, -1) / ref_T).view(v.shape[0], -1, 1).float()
 
+        v = v.transpose(1, 2)
+        probs = self.classifier(v)
+        v = v.transpose(1, 2)
         v = v.repeat(1,1,y.shape[-1])
 
         y = self.tch_stack1_butt(y, v)
@@ -197,4 +200,4 @@ class SpExPlus(nn.Module):
         s2 = self.decoder_middle(m2 * y2)
         s3 = self.decoder_long(m3 * y3)
 
-        return s1, s2, s3
+        return s1, s2, s3, probs

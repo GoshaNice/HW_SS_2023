@@ -54,6 +54,7 @@ class BaseDataset(Dataset):
             "ref_length": data_dict["ref_length"],
             "target": target,
             "target_length": data_dict["target_length"],
+            "target_id": data_dict["target_id"],
         }
 
     @staticmethod

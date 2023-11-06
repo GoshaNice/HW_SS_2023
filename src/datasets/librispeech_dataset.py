@@ -98,6 +98,18 @@ class LibrispeechDataset(BaseDataset):
         mix = sorted(glob(os.path.join(out_folder, '*-mixed.wav')))
         target = sorted(glob(os.path.join(out_folder, '*-target.wav')))
 
+        map_target_speaker = {}
+        i = 0
+
+        for path in ref:
+            speaker_id = path.split("/")[-1].split("_")[0]
+            if speaker_id in map_target_speaker.keys():
+                continue
+            map_target_speaker[speaker_id] = i
+            i += 1
+        
+        total_speakers = i
+
         for i in range(len(ref)):
             ref_path = ref[i]
             ref_info = torchaudio.info(ref_path)
@@ -110,12 +122,16 @@ class LibrispeechDataset(BaseDataset):
             target_path = target[i]
             target_info = torchaudio.info(target_path)
             target_length = target_info.num_frames / target_info.sample_rate
+
+            target_id = ref_path.split("/")[-1].split("_")[0]
             index.append({
                 "ref": ref_path,
                 "ref_length": ref_length,
                 "mix": mix_path,
                 "mix_length": mix_length,
                 "target": target_path,
-                "target_length": target_length
+                "target_length": target_length,
+                "target_id": map_target_speaker[target_id],
+                "total_speakers": total_speakers
             })
         return index

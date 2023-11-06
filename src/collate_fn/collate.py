@@ -56,6 +56,6 @@ def collate_fn(dataset_items: List[dict]):
             )
         )
     result_batch["target"] = torch.cat(targets, dim=0)
-
+    result_batch["target_id"] = torch.tensor([item["target_id"] for item in dataset_items])
 
     return result_batch

@@ -5,20 +5,19 @@ from torch import Tensor
 import numpy as np
 
 from src.base.base_metric import BaseMetric
-from src.metric.utils import calc_si_sdr
+from torchmetrics.audio import ScaleInvariantSignalDistortionRatio
 
 
 class SiSDRMetric(BaseMetric):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, zero_mean = True, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.sisdr = ScaleInvariantSignalDistortionRatio(zero_mean)
 
     def __call__(
         self, prediction: Tensor, target: Tensor, **kwargs
     ):
-        si_sdrs = []
-        predictions = prediction.cpu().detach().numpy()
-        targets = target.cpu().detach().numpy()
-        for prediction, target in zip(predictions, targets):
-            si_sdr = calc_si_sdr(prediction, target)
-            si_sdrs.append(si_sdr)
-        return - sum(si_sdrs) / len(si_sdrs)
+        prediction = prediction.squeeze(1)
+        self.sisdr = self.sisdr.to(prediction.device)
+        target = target.to(prediction.device)
+        sisdr = self.sisdr(prediction, target)
+        return sisdr.mean()

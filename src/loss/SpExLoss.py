@@ -2,13 +2,8 @@ import torch
 from torch import Tensor
 from torch import nn
 import torch.nn.functional as F
+from torchmetrics.audio import ScaleInvariantSignalDistortionRatio
 
-
-def calc_si_sdr(est: torch.Tensor, target: torch.Tensor):
-    """Calculate SI-SDR metric for two given tensors"""
-    assert est.shape == target.shape, "Input and Target should have the same shape"
-    alpha = (target * est).sum(dim=-1) / torch.norm(target, dim=-1)**2
-    return 20 * torch.log10(torch.norm(alpha.unsqueeze(1) * target, dim=-1) / (torch.norm(alpha.unsqueeze(1) * target - est, dim=-1) + 1e-6) + 1e-6)
 
 class SpExLoss(nn.Module):
     def __init__(self, alpha, beta, gamma, *args, **kwargs):
@@ -42,10 +37,13 @@ class SpExLoss(nn.Module):
         s1 = self.crop_or_pad(s1, target)
         s2 = self.crop_or_pad(s2, target)
         s3 = self.crop_or_pad(s3, target)
+
+        sisdr = ScaleInvariantSignalDistortionRatio(zero_mean=True)
+        sisdr = sisdr.to(s1.device)
         loss = torch.zeros((s1.shape[0]), device=s1.device)
-        loss -= (1 - self.alpha - self.beta) * calc_si_sdr(s1, target)
-        loss -= self.alpha * calc_si_sdr(s2, target)
-        loss -= self.beta * calc_si_sdr(s3, target)
+        loss -= (1 - self.alpha - self.beta) * sisdr(s1, target)
+        loss -= self.alpha * sisdr(s2, target)
+        loss -= self.beta * sisdr(s3, target)
         if target_id is not None:
             probs = torch.softmax(probs, dim=1)
             self.ce = self.ce.to(probs.device)

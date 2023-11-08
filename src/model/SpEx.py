@@ -80,7 +80,7 @@ class SpExPlus(nn.Module):
                  L3: int = 8, 
                  N: int = 16,
                  proj_dim: int = 32,
-                 tch_extractor_hidden: int = 32,
+                 tcn_extractor_hidden: int = 32,
                  num_speakers: int = 248,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -105,26 +105,26 @@ class SpExPlus(nn.Module):
 
         self.proj_extractor = nn.Conv1d(in_channels=3*N, out_channels=proj_dim, kernel_size=1)
         
-        blocks_stack1 = [TCNBlock_extractor(in_channels=proj_dim, out_channels=tch_extractor_hidden) for _ in range(7)]
-        blocks_stack2 = [TCNBlock_extractor(in_channels=proj_dim, out_channels=tch_extractor_hidden) for _ in range(7)]
-        blocks_stack3 = [TCNBlock_extractor(in_channels=proj_dim, out_channels=tch_extractor_hidden) for _ in range(7)]
-        blocks_stack4 = [TCNBlock_extractor(in_channels=proj_dim, out_channels=tch_extractor_hidden) for _ in range(7)]
+        blocks_stack1 = [TCNBlock_extractor(in_channels=proj_dim, out_channels=tcn_extractor_hidden) for _ in range(7)]
+        blocks_stack2 = [TCNBlock_extractor(in_channels=proj_dim, out_channels=tcn_extractor_hidden) for _ in range(7)]
+        blocks_stack3 = [TCNBlock_extractor(in_channels=proj_dim, out_channels=tcn_extractor_hidden) for _ in range(7)]
+        blocks_stack4 = [TCNBlock_extractor(in_channels=proj_dim, out_channels=tcn_extractor_hidden) for _ in range(7)]
 
-        self.tch_stack1_butt = TCNBlock_extractor(in_channels=proj_dim, out_channels=tch_extractor_hidden, is_first=True, spk_embed_dim=proj_dim)
+        self.tch_stack1_butt = TCNBlock_extractor(in_channels=proj_dim, out_channels=tcn_extractor_hidden, is_first=True, spk_embed_dim=proj_dim)
         self.tcn_stack1_extractor = nn.Sequential(*blocks_stack1)
-        self.tch_stack2_butt = TCNBlock_extractor(in_channels=proj_dim, out_channels=tch_extractor_hidden, is_first=True, spk_embed_dim=proj_dim)
+        self.tch_stack2_butt = TCNBlock_extractor(in_channels=proj_dim, out_channels=tcn_extractor_hidden, is_first=True, spk_embed_dim=proj_dim)
         self.tcn_stack2_extractor = nn.Sequential(*blocks_stack2)
-        self.tch_stack3_butt = TCNBlock_extractor(in_channels=proj_dim, out_channels=tch_extractor_hidden, is_first=True, spk_embed_dim=proj_dim)
+        self.tch_stack3_butt = TCNBlock_extractor(in_channels=proj_dim, out_channels=tcn_extractor_hidden, is_first=True, spk_embed_dim=proj_dim)
         self.tcn_stack3_extractor = nn.Sequential(*blocks_stack3)
-        self.tch_stack4_butt = TCNBlock_extractor(in_channels=proj_dim, out_channels=tch_extractor_hidden, is_first=True, spk_embed_dim=proj_dim)
+        self.tch_stack4_butt = TCNBlock_extractor(in_channels=proj_dim, out_channels=tcn_extractor_hidden, is_first=True, spk_embed_dim=proj_dim)
         self.tcn_stack4_extractor = nn.Sequential(*blocks_stack4)
 
         self.speaker_embedding = nn.Sequential(
             nn.Conv1d(in_channels=3*N, out_channels=proj_dim, kernel_size=1),
             ResNetBlock(in_channels=proj_dim, out_channels=proj_dim),
-            ResNetBlock(in_channels=proj_dim, out_channels=tch_extractor_hidden),
-            ResNetBlock(in_channels=tch_extractor_hidden, out_channels=tch_extractor_hidden),
-            nn.Conv1d(in_channels=tch_extractor_hidden, out_channels=tch_extractor_hidden, kernel_size=1),
+            ResNetBlock(in_channels=proj_dim, out_channels=tcn_extractor_hidden),
+            ResNetBlock(in_channels=tcn_extractor_hidden, out_channels=tcn_extractor_hidden),
+            nn.Conv1d(in_channels=tcn_extractor_hidden, out_channels=tcn_extractor_hidden, kernel_size=1),
             nn.AvgPool1d(kernel_size=1)
         )
 

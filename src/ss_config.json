@@ -1,13 +1,8 @@
 {
-  "name": "Architecture_test",
+  "name": "Spex+Hope",
   "n_gpu": 1,
   "preprocessing": {
-      "sr": 16000,
-      "spectrogram": {
-          "type": "MelSpectrogram",
-          "args": {}
-      },
-      "log_spec": true
+      "sr": 8000
   },
   "augmentations": {
       "wave": [],
@@ -15,18 +10,24 @@
   },
   "arch": {
       "type": "SpExPlus",
-      "args": {}
+      "args": {
+        "N": 64,
+        "proj_dim": 128,
+        "tcn_extractor_hidden": 128,
+        "num_speakers": 251
+      }
   },
   "data": {
       "train": {
-          "batch_size": 2,
+          "batch_size": 3,
           "num_workers": 5,
           "datasets": [
               {
                   "type": "LibrispeechDataset",
                   "args": {
                       "part": "train-clean-100",
-                      "max_audio_length": 20.0
+                      "max_audio_length": 3.5,
+                      "nfiles": 10000
                   }
               }
           ]
@@ -38,19 +39,8 @@
               {
                   "type": "LibrispeechDataset",
                   "args": {
-                      "part": "dev-clean"
-                  }
-              }
-          ]
-      },
-      "test-other": {
-          "batch_size": 2,
-          "num_workers": 5,
-          "datasets": [
-              {
-                  "type": "LibrispeechDataset",
-                  "args": {
-                      "part": "test-other"
+                      "part": "dev-clean",
+                      "test": true
                   }
               }
           ]
@@ -62,7 +52,8 @@
               {
                   "type": "LibrispeechDataset",
                   "args": {
-                      "part": "test-clean"
+                      "part": "test-clean",
+                      "test": true
                   }
               }
           ]
@@ -71,7 +62,7 @@
   "optimizer": {
       "type": "Adam",
       "args": {
-          "lr": 0.0003
+          "lr": 0.001
       }
   },
   "loss": {
@@ -88,15 +79,21 @@
           "args": {
               "name": "SiSDR"
           }
+      },
+      {
+          "type": "PESQMetric",
+          "args": {
+              "name": "PESQ"
+          }
       }
   ],
   "lr_scheduler": {
       "type": "OneCycleLR",
       "args": {
           "steps_per_epoch": 100,
-          "epochs": 200,
+          "epochs": 100,
           "anneal_strategy": "cos",
-          "max_lr": 0.0003,
+          "max_lr": 0.001,
           "pct_start": 0.2
       }
   },

@@ -207,9 +207,9 @@ class Trainer(BaseTrainer):
 
     def _log_audio(self, prediction_batch, ref_batch, target_batch):
         ind = random.choice(torch.arange(prediction_batch.shape[0]))
-        prediction = prediction_batch[ind]
-        ref = ref_batch[ind]
-        target = target_batch[ind]
+        prediction = prediction_batch[ind].detach().cpu()
+        ref = ref_batch[ind].detach().cpu()
+        target = target_batch[ind].detach().cpu()
         self.writer.add_audio("prediction", prediction, sample_rate=16000)
         self.writer.add_audio("ref", ref, sample_rate=16000)
         self.writer.add_audio("target", target, sample_rate=16000)

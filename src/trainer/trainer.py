@@ -16,6 +16,7 @@ from src.base.base_text_encoder import BaseTextEncoder
 from src.logger.utils import plot_spectrogram_to_buf
 from src.metric.utils import calc_cer, calc_wer
 from src.utils import inf_loop, MetricTracker
+import pyloudnorm as pyln
 
 
 class Trainer(BaseTrainer):
@@ -207,7 +208,12 @@ class Trainer(BaseTrainer):
 
     def _log_audio(self, prediction_batch, ref_batch, target_batch):
         ind = random.choice(torch.arange(prediction_batch.shape[0]))
-        prediction = prediction_batch[ind].detach().cpu()
+        prediction = prediction_batch[ind].detach().cpu().numpy()
+        meter = pyln.Meter(16000) # create BS.1770 meter
+        loud_prediction = meter.integrated_loudness(prediction)
+        prediction = pyln.normalize.loudness(prediction, loud_prediction, -20)
+        prediction = torch.from_numpy(prediction)
+
         ref = ref_batch[ind].detach().cpu()
         target = target_batch[ind].detach().cpu()
         self.writer.add_audio("prediction", prediction, sample_rate=16000)

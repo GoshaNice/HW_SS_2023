@@ -12,18 +12,14 @@ class GlobalLayerNorm(nn.Module):
     def __init__(self, channel_size):
         super().__init__()
         self.channel_size = channel_size
-        self.gamma = torch.ones(channel_size, requires_grad=True)
-        self.beta = torch.zeros(channel_size, requires_grad=True)
-
-    def _apply_gain_and_bias(self, normed_x):
-        return (self.gamma.to(normed_x.device) * normed_x.transpose(1, -1) +
-                self.beta.to(normed_x.device)).transpose(1, -1)
+        self.beta = nn.parameter.Parameter(torch.zeros(channel_size, 1))
+        self.gamma = nn.parameter.Parameter(torch.ones(channel_size, 1))
 
     def forward(self, x):
-        dims = list(range(1, len(x.shape)))
-        mean = x.mean(dim=dims, keepdim=True)
-        var = ((x - mean)**2).mean(dim=dims, keepdim=True)
-        return self._apply_gain_and_bias((x - mean) / (var + 1e-6).sqrt())
+        mean = torch.mean(x, (1, 2), keepdim=True)
+        var = torch.mean((x - mean)**2, (1, 2), keepdim=True)
+        x = self.gamma * (x - mean) / torch.sqrt(var + 1e-6) + self.beta
+        return x
 
 
 class TCNBlock_extractor(nn.Module):
@@ -58,17 +54,22 @@ class ResNetBlock(nn.Module):
         super().__init__(*args, **kwargs)
         self.block1 = nn.Sequential(
             nn.Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=1),
+            nn.BatchNorm1d(num_features=out_channels),
             nn.PReLU(),
-            GlobalLayerNorm(channel_size=out_channels),
-            nn.Conv1d(in_channels=out_channels, out_channels=in_channels, kernel_size=1),
-            nn.BatchNorm1d(num_features=in_channels)
+            nn.Conv1d(in_channels=out_channels, out_channels=out_channels, kernel_size=1),
+            nn.BatchNorm1d(num_features=out_channels)
         )
+        self.need_resample = (in_channels != out_channels)
+        self.resample = nn.Conv1d(in_channels=in_channels, out_channels=out_channels, kernel_size=1)
         self.block2 = nn.Sequential(
             nn.PReLU(),
             nn.MaxPool1d(kernel_size=(3))
         )
     def forward(self, x):
-        output = self.block1(x) + x
+        if self.need_resample:
+            output = self.block1(x) + self.resample(x)
+        else:
+            output = self.block1(x) + x
         output = self.block2(output)
         return output
 
@@ -125,7 +126,6 @@ class SpExPlus(nn.Module):
             ResNetBlock(in_channels=proj_dim, out_channels=tcn_extractor_hidden),
             ResNetBlock(in_channels=tcn_extractor_hidden, out_channels=tcn_extractor_hidden),
             nn.Conv1d(in_channels=tcn_extractor_hidden, out_channels=tcn_extractor_hidden, kernel_size=1),
-            nn.AvgPool1d(kernel_size=1)
         )
 
         self.mask1 = nn.Sequential(

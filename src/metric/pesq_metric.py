@@ -13,5 +13,6 @@ class PESQMetric(BaseMetric):
         self, prediction: Tensor, target: Tensor, **kwargs
     ):
         prediction = prediction.squeeze(1)
+        prediction, target = self.pad_to_target(prediction, target)
         pesq = self.pesq(prediction, target)
         return pesq.mean()

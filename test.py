@@ -11,7 +11,28 @@ from src.trainer import Trainer
 from src.utils import ROOT_PATH
 from src.utils.object_loading import get_dataloaders
 from src.utils.parse_config import ConfigParser
-from src.metric.utils import calc_wer, calc_cer
+from torchmetrics.audio import ScaleInvariantSignalDistortionRatio
+from torchmetrics.audio import PerceptualEvaluationSpeechQuality
+import pyloudnorm as pyln
+import torch.nn.functional as F
+
+def pad_to_target(prediction, target):
+        if prediction.shape[-1] > target.shape[-1]:
+            target = F.pad(
+                target,
+                (0, int(prediction.shape[-1] - target.shape[-1])),
+                "constant",
+                0,
+            )
+        elif prediction.shape[-1] < target.shape[-1]:
+            prediction = F.pad(
+                prediction,
+                (0, int(target.shape[-1] - prediction.shape[-1])),
+                "constant",
+                0,
+            )
+        return prediction, target
+
 
 DEFAULT_CHECKPOINT_PATH = ROOT_PATH / "default_test_model" / "checkpoint.pth"
 
@@ -23,14 +44,11 @@ def main(config, out_file):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"We are running on {device}")
 
-    # text_encoder
-    text_encoder = config.get_text_encoder()
-
     # setup data_loader instances
-    dataloaders = get_dataloaders(config, text_encoder)
+    dataloaders = get_dataloaders(config)
 
     # build model architecture
-    model = config.init_obj(config["arch"], module_model, n_class=len(text_encoder))
+    model = config.init_obj(config["arch"], module_model)
     logger.info(model)
 
     logger.info("Loading checkpoint: {} ...".format(config.resume))
@@ -44,71 +62,52 @@ def main(config, out_file):
     model = model.to(device)
     model.eval()
 
+    calc_sisdr = ScaleInvariantSignalDistortionRatio()
+    calc_pesq = PerceptualEvaluationSpeechQuality(16000, "wb")
     results = []
-    cer_argmax = []
-    cer_bs = []
-    cer_bs_lm = []
-
-    wer_argmax = []
-    wer_bs = []
-    wer_bs_lm = []
+    si_sdrs = []
+    pesqs = []
 
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(dataloaders["test"])):
             batch = Trainer.move_batch_to_device(batch, device)
-            output = model(**batch)
-            if type(output) is dict:
-                batch.update(output)
-            else:
-                batch["logits"] = output
-            batch["log_probs"] = torch.log_softmax(batch["logits"], dim=-1)
-            batch["log_probs_length"] = model.transform_input_lengths(
-                batch["spectrogram_length"]
-            )
-            batch["probs"] = batch["log_probs"].exp().cpu()
-            probs = batch["probs"]
-            batch["argmax"] = batch["probs"].argmax(-1)
+            s1, s2, s3, probs = model(**batch)
+            batch["s1"] = s1
+            batch["s2"] = s2
+            batch["s3"] = s3
+            batch["prediction"] = s1
+            batch["probs"] = probs
 
-            for i in range(len(batch["text"])):
-                argmax = batch["argmax"][i]
-                argmax = argmax[: int(batch["log_probs_length"][i])]
-                target_text = batch["text"][i]
-                argmax_pred = text_encoder.ctc_decode(argmax.cpu().numpy())
-                
-                bs_preds = text_encoder.ctc_beam_search(
-                            probs[i], batch["log_probs_length"][i], beam_size=10
-                        )[:10]
-                bs_lm_preds = text_encoder.ctc_beam_search_lm(
-                            probs[i], batch["log_probs_length"][i], beam_size=512
-                        )[0]
+            for i in range(len(batch["s1"])):
+                prediction = batch["s1"][i]
+                target = batch["target"][i].unsqueeze(0)
+                prediction, target = pad_to_target(prediction, target)
+                prediction = prediction.squeeze(0).detach().cpu().numpy()
+                target = target.squeeze(0).detach().cpu().numpy()
 
-                cer_argmax.append(calc_cer(target_text, argmax_pred))
-                wer_argmax.append(calc_wer(target_text, argmax_pred))
+                meter = pyln.Meter(16000) # create BS.1770 meter
+                loud_prediction = meter.integrated_loudness(prediction)
+                loud_target = meter.integrated_loudness(target)
 
-                cer_bs.append(calc_cer(target_text, bs_preds[0].text))
-                wer_bs.append(calc_wer(target_text, bs_preds[0].text))
+                prediction = pyln.normalize.loudness(prediction, loud_prediction, -20)
+                target = pyln.normalize.loudness(target, loud_target, -20)
+                si_sdr = calc_sisdr(torch.from_numpy(prediction), torch.from_numpy(target))
+                pesq = calc_pesq(torch.from_numpy(prediction), torch.from_numpy(target))
 
-                cer_bs_lm.append(calc_cer(target_text, bs_lm_preds.text))
-                wer_bs_lm.append(calc_wer(target_text, bs_lm_preds.text))
+                si_sdrs.append(si_sdr.item())
+                pesqs.append(pesq.item())
 
                 results.append(
                     {
-                        "ground_truth": target_text,
-                        "pred_text_argmax": argmax_pred,
-                        "pred_text_beam_search": [hypo.text for hypo in bs_preds],
-                        "pred_text_beam_search_LM": bs_lm_preds.text,
+                        "SI-SDR": si_sdr.item(),
+                        "PESQ": pesq.item()
                     }
                 )
+
     print("Final_metrics")
-    print("  Argmax:")
-    print(f"    CER: {sum(cer_argmax) / len(cer_argmax)}")
-    print(f"    WER: {sum(wer_argmax) / len(wer_argmax)}")
-    print("  Custom BeamSearch:")
-    print(f"    CER: {sum(cer_bs) / len(cer_bs)}")
-    print(f"    WER: {sum(wer_bs) / len(wer_bs)}")
-    print("  BeamSearch+LM:")
-    print(f"    CER: {sum(cer_bs_lm) / len(cer_bs_lm)}")
-    print(f"    WER: {sum(wer_bs_lm) / len(wer_bs_lm)}")
+    print("SI-SDR: ", sum(si_sdrs) / len(si_sdrs))
+    print("PESQ: ", sum(pesqs) / len(pesqs))
+
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
 

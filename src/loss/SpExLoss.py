@@ -37,13 +37,13 @@ class SpExLoss(nn.Module):
         return prediction, target
 
     def forward(
-        self, s1, s2, s3, target, probs, target_id=None, **batch
+        self, s1, s2, s3, target, logits, target_id=None, **batch
     ) -> Tensor:
         target = target.to(s1.device)
         s1 = s1.squeeze(1)
         s2 = s2.squeeze(1)
         s3 = s3.squeeze(1)
-        probs = probs.squeeze(1)
+        logits = logits.squeeze(1)
         s1, target_s1 = self.pad_to_target(s1, target)
         s2, target_s2 = self.pad_to_target(s2, target)
         s3, target_s3 = self.pad_to_target(s3, target)
@@ -53,6 +53,6 @@ class SpExLoss(nn.Module):
         loss -= self.alpha * calc_si_sdr(s2, target_s2)
         loss -= self.beta * calc_si_sdr(s3, target_s3)
         if target_id is not None:
-            self.ce = self.ce.to(probs.device)
-            loss += self.gamma * self.ce(probs, target_id)
+            self.ce = self.ce.to(logits.device)
+            loss += self.gamma * self.ce(logits, target_id)
         return loss.mean()

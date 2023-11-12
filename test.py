@@ -15,6 +15,7 @@ from torchmetrics.audio import ScaleInvariantSignalDistortionRatio
 from torchmetrics.audio import PerceptualEvaluationSpeechQuality
 import pyloudnorm as pyln
 import torch.nn.functional as F
+import numpy as np
 
 def pad_to_target(prediction, target):
         if prediction.shape[-1] > target.shape[-1]:
@@ -68,18 +69,15 @@ def main(config, out_file):
     si_sdrs = []
     pesqs = []
 
+
     with torch.no_grad():
         for batch_num, batch in enumerate(tqdm(dataloaders["test"])):
             batch = Trainer.move_batch_to_device(batch, device)
             s1, s2, s3, probs = model(**batch)
-            batch["s1"] = s1
-            batch["s2"] = s2
-            batch["s3"] = s3
             batch["prediction"] = s1
-            batch["probs"] = probs
 
-            for i in range(len(batch["s1"])):
-                prediction = batch["s1"][i]
+            for i in range(len(batch["prediction"])):
+                prediction = batch["prediction"][i]
                 target = batch["target"][i].unsqueeze(0)
                 prediction, target = pad_to_target(prediction, target)
                 prediction = prediction.squeeze(0).detach().cpu().numpy()
@@ -91,6 +89,7 @@ def main(config, out_file):
 
                 prediction = pyln.normalize.loudness(prediction, loud_prediction, -20)
                 target = pyln.normalize.loudness(target, loud_target, -20)
+
                 si_sdr = calc_sisdr(torch.from_numpy(prediction), torch.from_numpy(target))
                 pesq = calc_pesq(torch.from_numpy(prediction), torch.from_numpy(target))
 
@@ -193,10 +192,13 @@ if __name__ == "__main__":
                     {
                         "type": "CustomDirAudioDataset",
                         "args": {
-                            "audio_dir": str(test_data_folder / "audio"),
-                            "transcription_dir": str(
-                                test_data_folder / "transcriptions"
+                            "mix_dir": str(test_data_folder / "mix"),
+                            "refs_dir": str(
+                                test_data_folder / "refs"
                             ),
+                            "targets_dir": str(
+                                test_data_folder / "targets"
+                            )
                         },
                     }
                 ],

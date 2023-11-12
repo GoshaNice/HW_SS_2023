@@ -36,7 +36,7 @@
           ]
       },
       "val": {
-          "batch_size": 2,
+          "batch_size": 1,
           "num_workers": 5,
           "datasets": [
               {
@@ -44,13 +44,13 @@
                   "args": {
                       "part": "dev-clean",
                       "test": true,
-                      "limit": 50
+                      "limit": 100
                   }
               }
           ]
       },
       "test-clean": {
-          "batch_size": 2,
+          "batch_size": 1,
           "num_workers": 5,
           "datasets": [
               {
@@ -58,7 +58,7 @@
                   "args": {
                       "part": "test-clean",
                       "test": true,
-                      "limit": 50
+                      "limit": 200
                   }
               }
           ]
@@ -93,13 +93,12 @@
       }
   ],
   "lr_scheduler": {
-      "type": "OneCycleLR",
+      "type": "ReduceLROnPlateau",
       "args": {
-          "steps_per_epoch": 400,
-          "epochs": 101,
-          "anneal_strategy": "cos",
-          "max_lr": 0.001,
-          "pct_start": 0.2
+          "factor": 0.5,
+          "mode": "max",
+          "patience": 5,
+          "cooldown": 15
       }
   },
   "trainer": {
@@ -111,7 +110,7 @@
       "early_stop": 100,
       "visualize": "wandb",
       "wandb_project": "ss_project",
-      "len_epoch": 400,
+      "len_epoch": 500,
       "grad_norm_clip": 10
   }
 }

@@ -1,5 +1,5 @@
 {
-    "name": "Spex+Hope",
+    "name": "TestSpex+Hope",
     "n_gpu": 1,
     "preprocessing": {
         "sr": 16000
@@ -22,13 +22,13 @@
     },
     "data": {
         "test": {
-            "batch_size": 2,
+            "batch_size": 1,
             "num_workers": 5,
             "datasets": [
                 {
                     "type": "LibrispeechDataset",
                     "args": {
-                        "part": "dev-clean",
+                        "part": "test-clean",
                         "test": true
                     }
                 }

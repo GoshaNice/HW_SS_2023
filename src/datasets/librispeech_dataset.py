@@ -87,12 +87,21 @@ class LibrispeechDataset(BaseDataset):
                                  test = self.test)
         
         index = []
-        mixer.generate_mixes(snr_levels=[-5, 5],
-                             num_workers=2,
-                             update_steps=100,
-                             trim_db = 20,
-                             vad_db=20,
-                             audioLen=3)
+        if self.test:
+            mixer.generate_mixes(snr_levels=[0, 0],
+                                num_workers=2,
+                                trim_db=None,
+                                vad_db=None,
+                                update_steps=100,
+                                audioLen=None)
+        else:
+            mixer.generate_mixes(snr_levels=[0, 0],
+                                num_workers=2,
+                                trim_db=None,
+                                vad_db=None,
+                                update_steps=100,
+                                audioLen=3)
+
         
         ref = sorted(glob(os.path.join(out_folder, '*-ref.wav')))
         mix = sorted(glob(os.path.join(out_folder, '*-mixed.wav')))

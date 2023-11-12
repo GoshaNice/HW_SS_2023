@@ -55,10 +55,10 @@ class Trainer(BaseTrainer):
         self.log_step = 50
 
         self.train_metrics = MetricTracker(
-            "loss", "grad norm", *[m.name for m in self.metrics], writer=self.writer
+            "accuracy", "loss", "grad norm", *[m.name for m in self.metrics], writer=self.writer
         )
         self.evaluation_metrics = MetricTracker(
-            "loss", *[m.name for m in self.metrics], writer=self.writer
+            "accuracy", "loss", *[m.name for m in self.metrics], writer=self.writer
         )
 
     @staticmethod
@@ -113,9 +113,10 @@ class Trainer(BaseTrainer):
                         epoch, self._progress(batch_idx), batch["loss"].item()
                     )
                 )
-                self.writer.add_scalar(
-                    "learning rate", self.lr_scheduler.get_last_lr()[0]
-                )
+                if self.lr_scheduler is not None:
+                    self.writer.add_scalar(
+                        "learning rate", float(self.lr_scheduler.optimizer.param_groups[0]["lr"])
+                    )
 
                 self._log_audio(batch["prediction"], batch["ref"], batch["target"])
                 self._log_scalars(self.train_metrics)
@@ -126,6 +127,8 @@ class Trainer(BaseTrainer):
             if batch_idx >= self.len_epoch:
                 break
         log = last_train_metrics
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.step(log["accuracy"])
 
         for part, dataloader in self.evaluation_dataloaders.items():
             val_log = self._evaluation_epoch(epoch, part, dataloader)
@@ -137,26 +140,24 @@ class Trainer(BaseTrainer):
         batch = self.move_batch_to_device(batch, self.device)
         if is_train:
             self.optimizer.zero_grad()
-        s1, s2, s3, probs = self.model(**batch)
+        s1, s2, s3, logits = self.model(**batch)
         batch["s1"] = s1
         batch["s2"] = s2
         batch["s3"] = s3
         batch["prediction"] = s1
-        batch["probs"] = probs
+        batch["logits"] = logits
 
-        #batch["log_probs"] = F.log_softmax(batch["logits"], dim=-1)
-        # here we have to change model to model.module in multi-gpu case
-        #batch["log_probs_length"] = self.model.transform_input_lengths(
-        #    batch["spectrogram_length"]
-        #)
+        probs = F.softmax(logits.squeeze(1), dim = -1)
+        labels = probs.argmax(dim=1)
+        accuracy = (labels==batch["target_id"]).sum().item()
+
         batch["loss"] = self.criterion(**batch)
         if is_train:
             batch["loss"].backward()
             self._clip_grad_norm()
             self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
-
+        
+        metrics.update("accuracy", accuracy)
         metrics.update("loss", batch["loss"].item())
         for met in self.metrics:
             metrics.update(met.name, met(**batch))
@@ -208,11 +209,11 @@ class Trainer(BaseTrainer):
 
     def _log_audio(self, prediction_batch, ref_batch, target_batch):
         ind = random.choice(torch.arange(prediction_batch.shape[0]))
-        prediction = prediction_batch[ind].detach().cpu().numpy()
+        prediction = prediction_batch[ind].squeeze(0).detach().cpu().numpy()
         meter = pyln.Meter(16000) # create BS.1770 meter
         loud_prediction = meter.integrated_loudness(prediction)
         prediction = pyln.normalize.loudness(prediction, loud_prediction, -20)
-        prediction = torch.from_numpy(prediction)
+        prediction = torch.from_numpy(prediction).unsqueeze(0)
 
         ref = ref_batch[ind].detach().cpu()
         target = target_batch[ind].detach().cpu()

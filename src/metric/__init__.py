@@ -11,5 +11,5 @@ __all__ = [
     "BeamsearchCERMetric",
     "SiSDRMetric",
     "SNRMetric",
-    "PESQMetric"
+    "PESQMetric",
 ]

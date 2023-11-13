@@ -1,9 +1,10 @@
 import torch.nn.functional as F
 
+
 class BaseMetric:
     def __init__(self, name=None, *args, **kwargs):
         self.name = name if name is not None else type(self).__name__
-    
+
     def pad_to_target(self, prediction, target):
         if prediction.shape[-1] > target.shape[-1]:
             target = F.pad(

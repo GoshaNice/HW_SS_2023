@@ -55,7 +55,11 @@ class Trainer(BaseTrainer):
         self.log_step = 50
 
         self.train_metrics = MetricTracker(
-            "accuracy", "loss", "grad norm", *[m.name for m in self.metrics], writer=self.writer
+            "accuracy",
+            "loss",
+            "grad norm",
+            *[m.name for m in self.metrics],
+            writer=self.writer,
         )
         self.evaluation_metrics = MetricTracker(
             "accuracy", "loss", *[m.name for m in self.metrics], writer=self.writer
@@ -115,7 +119,8 @@ class Trainer(BaseTrainer):
                 )
                 if self.lr_scheduler is not None:
                     self.writer.add_scalar(
-                        "learning rate", float(self.lr_scheduler.optimizer.param_groups[0]["lr"])
+                        "learning rate",
+                        float(self.lr_scheduler.optimizer.param_groups[0]["lr"]),
                     )
 
                 self._log_audio(batch["prediction"], batch["ref"], batch["target"])
@@ -128,7 +133,10 @@ class Trainer(BaseTrainer):
                 break
         log = last_train_metrics
         if self.lr_scheduler is not None:
-            self.lr_scheduler.step(log["accuracy"])
+            try:
+                self.lr_scheduler.step(log["accuracy"])
+            except:
+                self.lr_scheduler.step()
 
         for part, dataloader in self.evaluation_dataloaders.items():
             val_log = self._evaluation_epoch(epoch, part, dataloader)
@@ -147,16 +155,16 @@ class Trainer(BaseTrainer):
         batch["prediction"] = s1
         batch["logits"] = logits
 
-        probs = F.softmax(logits.squeeze(1), dim = -1)
+        probs = F.softmax(logits.squeeze(1), dim=-1)
         labels = probs.argmax(dim=1)
-        accuracy = (labels==batch["target_id"]).sum().item()
+        accuracy = (labels == batch["target_id"]).sum().item()
 
         batch["loss"] = self.criterion(**batch)
         if is_train:
             batch["loss"].backward()
             self._clip_grad_norm()
             self.optimizer.step()
-        
+
         metrics.update("accuracy", accuracy)
         metrics.update("loss", batch["loss"].item())
         for met in self.metrics:
@@ -210,7 +218,7 @@ class Trainer(BaseTrainer):
     def _log_audio(self, prediction_batch, ref_batch, target_batch):
         ind = random.choice(torch.arange(prediction_batch.shape[0]))
         prediction = prediction_batch[ind].squeeze(0).detach().cpu().numpy()
-        meter = pyln.Meter(16000) # create BS.1770 meter
+        meter = pyln.Meter(16000)  # create BS.1770 meter
         loud_prediction = meter.integrated_loudness(prediction)
         prediction = pyln.normalize.loudness(prediction, loud_prediction, -20)
         prediction = torch.from_numpy(prediction).unsqueeze(0)

@@ -1,7 +1,7 @@
 # SS HW1
 #### Implemented by: Pistsov Georgiy 202
 
-You can find report here: [wandb report](https://api.wandb.ai/links/goshanice/fpzqmh1d)
+You can find report here: [wandb report](https://wandb.ai/goshanice/ss_project/reports/-DLA-SS-Homework--Vmlldzo1OTQ4MTQz?accessToken=724noxivesjdk0w1rkq4ad9e9pbeby2hsytbnerniy4277j3lpfkkal3asjhkkt7)
 
 ## Installation guide
 
@@ -17,19 +17,6 @@ Then you run:
 ```shell
 make install
 ```
-
-## Run tests:
-
-```shell
-make test
-```
-
-## Download Language model:
-
-```shell
-make download_language_model
-```
-The file "lm.bin" will be in language_models/
 
 
 ## Download checkpoint:
@@ -52,18 +39,10 @@ Config for training you can find in src/config.json
 ### On test-clean:
 
 ```shell
-make test_model_test_clean
+make test_model
 ```
 
 The file "output_test_clean.json" with results will be in the root on repository
-
-### On test-other:
-
-```shell
-make test_model_test_other
-```
-
-The file "output_test_other.json" with results will be in the root on repository
 
 
 ## Run any other python script:
@@ -81,6 +60,18 @@ You can use:
 
 ```shell
 poetry run python test.py -r default_test_model/model_best.pth
+```
+
+## How to train my model
+
+```shell
+poetry run python test.py -c src/configs/config_SpexPlusChangeMixture.json
+```
+
+Then you will need to resume from latest checkpoint
+
+```shell
+poetry run python test.py -c src/configs/config_SpexPlusChangeMixturePost.json -r PATH/TO/CHECKPOINT
 ```
 
 

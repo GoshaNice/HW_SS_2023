@@ -7,14 +7,13 @@ import numpy as np
 from src.base.base_metric import BaseMetric
 from torchmetrics.audio import ScaleInvariantSignalDistortionRatio
 
+
 class SiSDRMetric(BaseMetric):
-    def __init__(self, zero_mean = False, *args, **kwargs):
+    def __init__(self, zero_mean=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.sisdr = ScaleInvariantSignalDistortionRatio(zero_mean)
 
-    def __call__(
-        self, prediction: Tensor, target: Tensor, **kwargs
-    ):
+    def __call__(self, prediction: Tensor, target: Tensor, **kwargs):
         prediction = prediction.squeeze(1)
         self.sisdr = self.sisdr.to(prediction.device)
         target = target.to(prediction.device)

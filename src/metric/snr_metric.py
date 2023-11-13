@@ -12,9 +12,7 @@ class SNRMetric(BaseMetric):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __call__(
-        self, batch_prediction: Tensor, batch_target: Tensor, **kwargs
-    ):
+    def __call__(self, batch_prediction: Tensor, batch_target: Tensor, **kwargs):
         snrs = []
         predictions = batch_prediction.cpu().detach().numpy()
         targets = batch_target.cpu().detach().numpy()

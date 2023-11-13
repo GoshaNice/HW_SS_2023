@@ -5,10 +5,14 @@ import torch.nn.functional as F
 
 
 def calc_si_sdr(est: torch.Tensor, target: torch.Tensor):
-     """Calculate SI-SDR metric for two given tensors"""
-     assert est.shape == target.shape, "Input and Target should have the same shape"
-     alpha = (target * est).sum(dim=-1) / torch.norm(target, dim=-1)**2
-     return 20 * torch.log10(torch.norm(alpha.unsqueeze(1) * target, dim=-1) / (torch.norm(alpha.unsqueeze(1) * target - est, dim=-1) + 1e-6) + 1e-6)
+    """Calculate SI-SDR metric for two given tensors"""
+    assert est.shape == target.shape, "Input and Target should have the same shape"
+    alpha = (target * est).sum(dim=-1) / torch.norm(target, dim=-1) ** 2
+    return 20 * torch.log10(
+        torch.norm(alpha.unsqueeze(1) * target, dim=-1)
+        / (torch.norm(alpha.unsqueeze(1) * target - est, dim=-1) + 1e-6)
+        + 1e-6
+    )
 
 
 class SpExLoss(nn.Module):
@@ -36,9 +40,7 @@ class SpExLoss(nn.Module):
             )
         return prediction, target
 
-    def forward(
-        self, s1, s2, s3, target, logits, target_id=None, **batch
-    ) -> Tensor:
+    def forward(self, s1, s2, s3, target, logits, target_id=None, **batch) -> Tensor:
         target = target.to(s1.device)
         s1 = s1.squeeze(1)
         s2 = s2.squeeze(1)

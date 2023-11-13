@@ -29,9 +29,7 @@ class BaseDataset(Dataset):
         self.spec_augs = spec_augs
 
         self._assert_index_is_valid(index)
-        index = self._filter_records_from_dataset(
-            index, max_audio_length, limit
-        )
+        index = self._filter_records_from_dataset(index, max_audio_length, limit)
         # it's a good idea to sort index by audio length
         # It would be easier to write length-based batch samplers later
         index = self._sort_index(index)
@@ -84,9 +82,7 @@ class BaseDataset(Dataset):
             return audio_tensor_wave, audio_tensor_spec
 
     @staticmethod
-    def _filter_records_from_dataset(
-        index: list, max_audio_length, limit=None
-    ) -> list:
+    def _filter_records_from_dataset(index: list, max_audio_length, limit=None) -> list:
         initial_size = len(index)
         if max_audio_length is not None:
             exceeds_audio_length = (
@@ -121,4 +117,4 @@ class BaseDataset(Dataset):
             assert "ref" in entry, (
                 "Each dataset item should include field 'ref'"
                 " - duration of audio (in seconds)."
-            ) #TODO
+            )  # TODO

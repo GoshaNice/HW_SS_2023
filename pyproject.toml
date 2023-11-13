@@ -32,14 +32,20 @@ numba = "0.58.0"
 torch-audiomentations = "^0.11.0"
 flashlight-text = "^0.0.4"
 kenlm = "^0.2.0"
+torchmetrics = {extras = ["audio"], version = "^1.2.0"}
+pyloudnorm = "^0.1.1"
+librosa = "^0.10.1"
+soundfile = "^0.12.1"
+pesq = "^0.0.4"
 
 [tool.poetry.group.dev.dependencies]
 pyproject-flake8 = "^6.1.0"
 black = "^23.9.1"
+gdown = "^4.7.1"
 
 [tool.flake8]
 max-line-length = 100
-extend-ignore = ["F403", "F401"]
+extend-ignore = ["F403", "F401", "E722", "E203"]
 
 [build-system]
 requires = ["poetry-core"]

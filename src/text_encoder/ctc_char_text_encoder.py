@@ -21,6 +21,7 @@ DECODER = build_ctcdecoder(
     alpha=0.5,
     beta=1.5,
 )"""
+DECODER = None
 
 
 class CTCCharTextEncoder(CharTextEncoder):

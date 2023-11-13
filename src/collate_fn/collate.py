@@ -11,7 +11,9 @@ def collate_fn(dataset_items: List[dict]):
     Collate and pad fields in dataset items
     """
     result_batch = {}
-    result_batch["mix_length"] = torch.tensor([item["mix"].shape[-1] for item in dataset_items])
+    result_batch["mix_length"] = torch.tensor(
+        [item["mix"].shape[-1] for item in dataset_items]
+    )
     max_mix_length = torch.max(result_batch["mix_length"]).item()
     mixes = []
     for item in dataset_items:
@@ -26,7 +28,9 @@ def collate_fn(dataset_items: List[dict]):
         )
     result_batch["mix"] = torch.cat(mixes, dim=0)
 
-    result_batch["ref_length"] = torch.tensor([item["ref"].shape[-1] for item in dataset_items])
+    result_batch["ref_length"] = torch.tensor(
+        [item["ref"].shape[-1] for item in dataset_items]
+    )
     max_ref_length = torch.max(result_batch["ref_length"]).item()
     refs = []
     for item in dataset_items:
@@ -41,8 +45,9 @@ def collate_fn(dataset_items: List[dict]):
         )
     result_batch["ref"] = torch.cat(refs, dim=0)
 
-
-    result_batch["target_length"] = torch.tensor([item["target"].shape[-1] for item in dataset_items])
+    result_batch["target_length"] = torch.tensor(
+        [item["target"].shape[-1] for item in dataset_items]
+    )
     max_target_length = torch.max(result_batch["target_length"]).item()
     targets = []
     for item in dataset_items:
@@ -56,6 +61,8 @@ def collate_fn(dataset_items: List[dict]):
             )
         )
     result_batch["target"] = torch.cat(targets, dim=0)
-    result_batch["target_id"] = torch.tensor([item["target_id"] for item in dataset_items])
+    result_batch["target_id"] = torch.tensor(
+        [item["target_id"] for item in dataset_items]
+    )
 
     return result_batch

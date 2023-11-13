@@ -15,7 +15,6 @@ class CustomDirAudioDataset(CustomAudioDataset):
                 entry["mix"] = str(path)
 
                 name = path.name
-                mix_name = path.name
                 ref_name = name.replace("mixed", "ref")
                 target_name = name.replace("mixed", "target")
                 entry["ref"] = str(Path(refs_dir) / ref_name)
